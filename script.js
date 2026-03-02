@@ -1,3 +1,10 @@
+// 전역 unhandled promise rejection 로깅
+window.addEventListener('unhandledrejection', (evt) => {
+    console.warn('Unhandled promise rejection:', evt.reason);
+    // prevent default to avoid console spam
+    // evt.preventDefault();
+});
+
 // ASCII 관련 설정
 const ASCII_CHARS = ' .:-=+*#%@';
 const ASCII_CHARS_EXTENDED = '  ..::--==++**##%%@@@@';
@@ -6,12 +13,13 @@ let columnCount = 80; // 출력 폭(문자 수)
 
 // 일시적 축소용 캔버스
 const tempCanvas = document.createElement('canvas');
-const tempCtx = tempCanvas.getContext('2d');
+const tempCtx = tempCanvas.getContext('2d', { willReadFrequently: true });
 
 // 비디오 및 캔버스 요소
 const video = document.getElementById('video');
 const canvas = document.getElementById('canvas');
-const ctx = canvas.getContext('2d');
+// getContext with willReadFrequently to silence performance warning
+const ctx = canvas.getContext('2d', { willReadFrequently: true });
 const asciiOutput = document.getElementById('asciiOutput');
 
 // 제어 요소
@@ -36,10 +44,25 @@ let audio = null;
 let audioContext = null;
 let analyser = null;
 let dataArray = null;
+let audioSource = null; // source 재생성 방지
+let micStream = null; // 마이크 스트림
+let isMicActive = false;
 let bassFreq = 0;
 let midFreq = 0;
 let trebleFreq = 0;
 let averageVolume = 0;
+
+// beat detection
+let lastBassFreq = 0;
+let beatCooldown = 0;
+const BEAT_THRESHOLD = 0.35; // bass increase threshold
+const BEAT_COOLDOWN_FRAMES = 15;
+
+// density restore timer
+let restoreTimer = null;
+
+// user preference density
+let userDensity = densityLevel;
 
 // 포즈 감지 관련
 let poseDetector = null;
@@ -59,18 +82,29 @@ async function init() {
         });
         
         video.srcObject = stream;
-        video.onloadedmetadata = () => {
-            video.play();
-            document.getElementById('cameraStat').textContent = '✓ 활성';
-            document.querySelector('.container').classList.add('camera-active');
-        };
+        // 메타데이터와 첫 번째 프레임이 준비될 때까지 기다립니다.
+        await new Promise(resolve => {
+            if (video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
+                resolve();
+            } else {
+                video.addEventListener('loadeddata', () => {
+                    resolve();
+                }, { once: true });
+            }
+        });
+        video.play().catch(()=>{});
+        document.getElementById('cameraStat').textContent = '✓ 활성';
+        document.querySelector('.container').classList.add('camera-active');
 
-            // 포즈 감지 모델 로드 (ml5.js)
+        // 포즈 감지 모델 로드 (ml5.js)
         if (typeof ml5 === 'undefined') {
             throw new Error('ml5.js가 로드되지 않았습니다. 스크립트 태그를 확인하세요.');
         }
-        poseDetector = await ml5.poseNet(video, () => {
+        poseDetector = ml5.poseNet(video, () => {
             console.log('포즈 감지 모델 로드 완료');
+        });
+        poseDetector.on('pose', (results) => {
+            poses = results;
         });
 
         // 오디오 컨텍스트 설정
@@ -95,7 +129,7 @@ function setupAudio() {
     audioContext = new (window.AudioContext || window.webkitAudioContext)();
     analyser = audioContext.createAnalyser();
     analyser.fftSize = 256;
-    analyser.smoothingTimeConstant = 0.8;
+    analyser.smoothingTimeConstant = 0.6; // 더 빠른 반응
     dataArray = new Uint8Array(analyser.frequencyBinCount);
 }
 
@@ -108,6 +142,7 @@ musicInput.addEventListener('change', (e) => {
     const file = e.target.files[0];
     if (file) {
         musicName.textContent = file.name;
+        console.log('선택된 음악:', file.name);
         
         // 오디오 요소 생성
         if (audio) {
@@ -117,13 +152,19 @@ musicInput.addEventListener('change', (e) => {
         
         audio = new Audio();
         audio.src = URL.createObjectURL(file);
+        audio.crossOrigin = 'anonymous';
         
-        // 오디오 컨텍스트에 연결
+        // 오디오 컨텍스트 설정
         if (!audioContext) setupAudio();
         
-        const source = audioContext.createMediaElementAudioSource(audio);
-        source.connect(analyser);
+        // source가 이미 있으면 제거, 새로 생성
+        if (audioSource) {
+            try { audioSource.disconnect(); } catch(e) { }
+        }
+        audioSource = audioContext.createMediaElementAudioSource(audio);
+        audioSource.connect(analyser);
         analyser.connect(audioContext.destination);
+        console.log('오디오 소스 연결됨');
         
         // 재생 버튼 활성화
         playBtn.disabled = false;
@@ -135,9 +176,11 @@ musicInput.addEventListener('change', (e) => {
 playBtn.addEventListener('click', () => {
     if (audio && audioContext.state === 'suspended') {
         audioContext.resume();
+        console.log('AudioContext resumed');
     }
     if (audio) {
         audio.play();
+        console.log('음악 재생시작, 볼륨:', averageVolume);
         playBtn.disabled = true;
         pauseBtn.disabled = false;
         stopBtn.disabled = false;
@@ -221,7 +264,12 @@ function imageToAscii(imageData, width, height) {
 
 // ============= 음악 분석 =============
 function analyzeMusic() {
-    if (!analyser) return;
+    if (!analyser || !audio || audio.paused) {
+        if (audio && !audio.paused && !analyser) {
+            console.warn('⚠️ analyser가 없음. setupAudio() 확인 필요');
+        }
+        return;
+    }
     
     analyser.getByteFrequencyData(dataArray);
     
@@ -254,19 +302,23 @@ function analyzeMusic() {
     }
     trebleFreq = trebleSum / trebleCount / 255;
     
-    // 평균 음량
+    // 평균 음량 (민감도 개선: 0-255 대신 로그 스케일 사용)
     let volumeSum = 0;
     for (let i = 0; i < dataArray.length; i++) {
         volumeSum += dataArray[i];
     }
-    averageVolume = (volumeSum / dataArray.length) / 255;
-}
+    const rawVolume = volumeSum / dataArray.length;
+    // 로그 스케일로 변환하여 작은 음량도 감지 가능하게 함
+    averageVolume = Math.pow(rawVolume / 255, 0.5); // 제곱근으로 민감도 향상
 
-// ============= 포즈 감지 =============
-function detectPose() {
-    poseDetector.on('pose', (results) => {
-        poses = results;
-    });
+    // beat detection using bass spike
+    if (beatCooldown <= 0 && bassFreq - lastBassFreq > BEAT_THRESHOLD) {
+        console.log('🥁 Beat detected! Bass:', bassFreq.toFixed(2));
+        triggerBeat();
+        beatCooldown = BEAT_COOLDOWN_FRAMES;
+    }
+    lastBassFreq = bassFreq;
+    if (beatCooldown > 0) beatCooldown--;
 }
 
 // ============= 통계 업데이트 =============
@@ -302,14 +354,19 @@ function applyMusicEffects() {
     const output = document.getElementById('asciiOutput');
     
     if (audio && !audio.paused) {
-        // 우세한 주파수 대역에 따른 색상 변경
-        if (bassFreq > 0.3) {
+        // 색상 시프트: 주파수 기반 hue
+        const hue = Math.floor(((bassFreq * 0.5 + midFreq * 0.3 + trebleFreq * 0.2) % 1) * 360);
+        output.style.color = `hsl(${hue}, 100%, 50%)`;
+        output.style.textShadow = `0 0 5px hsl(${hue}, 100%, 50%)`;
+
+        // 콘텐츠 클래스 유지
+        if (bassFreq > midFreq && bassFreq > trebleFreq) {
             document.querySelector('.container').classList.add('music-bass');
             document.querySelector('.container').classList.remove('music-mid', 'music-treble');
-        } else if (midFreq > 0.3) {
+        } else if (midFreq > trebleFreq) {
             document.querySelector('.container').classList.add('music-mid');
             document.querySelector('.container').classList.remove('music-bass', 'music-treble');
-        } else if (trebleFreq > 0.3) {
+        } else {
             document.querySelector('.container').classList.add('music-treble');
             document.querySelector('.container').classList.remove('music-bass', 'music-mid');
         }
@@ -326,6 +383,9 @@ function applyMusicEffects() {
         container.classList.remove('music-active');
         output.classList.remove('music-active');
         document.querySelector('.container').classList.remove('music-bass', 'music-mid', 'music-treble');
+        // reset color
+        output.style.color = '#00ff00';
+        output.style.textShadow = '0 0 5px rgba(0, 255, 0, 0.3)';
     }
 }
 
@@ -353,9 +413,6 @@ function renderLoop() {
         // ASCII로 변환
         const ascii = imageToAscii(imageData, cols, rows);
         asciiOutput.textContent = ascii;
-        
-        // 포즈 감지
-        detectPose();
     }
     
     // 음악 분석
@@ -374,6 +431,33 @@ function renderLoop() {
 // ============= 애플리케이션 시작 =============
 window.addEventListener('load', init);
 
+// beat trigger helper
+function triggerBeat() {
+    // density 해상도 높이기 (작은 step → 세부 묘사)
+    densityLevel = 1;
+    if (restoreTimer) clearTimeout(restoreTimer);
+    restoreTimer = setTimeout(() => {
+        densityLevel = userDensity;
+    }, 200);
+    
+    // glitch effect
+    const cont = document.querySelector('.ascii-container');
+    cont.classList.add('glitch');
+    setTimeout(() => cont.classList.remove('glitch'), 120);
+    
+    // 작은 문자 깨짐 효과: 약간의 랜덤 노이즈
+    const orig = asciiOutput.textContent;
+    let noisy = '';
+    for (let i = 0; i < orig.length; i++) {
+        if (Math.random() < 0.02 && orig[i] !== '\n') {
+            noisy += ASCII_CHARS_EXTENDED[Math.floor(Math.random() * ASCII_CHARS_EXTENDED.length)];
+        } else {
+            noisy += orig[i];
+        }
+    }
+    asciiOutput.textContent = noisy;
+}
+
 // ============= 창 닫을 때 정리 =============
 window.addEventListener('beforeunload', () => {
     if (video.srcObject) {
@@ -384,3 +468,73 @@ window.addEventListener('beforeunload', () => {
         audio.src = '';
     }
 });
+
+// ======== 마이크 입력 추가 ========
+// 기존 마이크 변수는 이미 선언됨 (let micStream = null; let isMicActive = false;)
+
+const micBtn = document.getElementById('micBtn');
+const micStopBtn = document.getElementById('micStopBtn');  
+const micStatus = document.getElementById('micStatus');
+
+micBtn.addEventListener('click', async () => {
+    try {
+        if (!audioContext) setupAudio();
+        micStream = await navigator.mediaDevices.getUserMedia({ 
+            audio: {
+                echoCancellation: false,
+                noiseSuppression: false,
+                autoGainControl: false // 자동 게인 제어 비활성화 (수동 조절 가능)
+            } 
+        });
+        console.log('마이크 활성화됨');
+        
+        if (audioSource) { 
+            try { audioSource.disconnect(); } catch(e) { } 
+        }
+        
+        // 게인 노드 추가 (마이크 입력 증폭)
+        let gainNode = audioContext.createGain();
+        gainNode.gain.value = 3; // 3배 증폭 (시스템 오디오 감지 개선)
+        
+        // 올바른 메서드명은 createMediaStreamSource입니다.
+        audioSource = audioContext.createMediaStreamSource(micStream);
+        audioSource.connect(gainNode);
+        gainNode.connect(analyser);
+        analyser.connect(audioContext.destination);
+        
+        isMicActive = true;
+        micBtn.disabled = true;
+        micStopBtn.disabled = false;
+        micStatus.textContent = 'ON';
+        micStatus.style.color = '#00ff00';
+        document.getElementById('musicName').textContent = '시스템 오디오 감지 중';
+        document.getElementById('musicStat').textContent = '마이크 활성';
+        playBtn.disabled = true;
+        pauseBtn.disabled = true;
+        stopBtn.disabled = true;
+        console.log('유튜브 등의 시스템 오디오 감지 시작');
+    } catch (error) {
+        console.error('마이크 오류:', error);
+        alert('마이크 액세스가 거부되었습니다. 브라우저 설정에서 허용하세요.');
+    }
+});
+
+micStopBtn.addEventListener('click', () => {
+    if (micStream) {
+        micStream.getTracks().forEach(track => track.stop());
+        console.log('마이크 중지됨');
+    }
+    
+    if (audioSource) {
+        try { audioSource.disconnect(); } catch(e) { }
+    }
+    
+    isMicActive = false;
+    micBtn.disabled = false;
+    micStopBtn.disabled = true;
+    micStatus.textContent = 'OFF';
+    micStatus.style.color = '#00aa00';
+    document.getElementById('musicName').textContent = '선택된 파일 없음';
+    document.getElementById('musicStat').textContent = '정지';
+});
+
