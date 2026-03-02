@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ASCII 카메라 - 음악 반응형</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎥 ASCII 카메라</h1>
+            <p>음악을 재생하면 ASCII 스타일이 변해요!</p>
+        </div>
+
+        <div class="controls">
+            <div class="control-group">
+                <label for="musicInput">🎵 음악 파일 선택:</label>
+                <input type="file" id="musicInput" accept="audio/*" style="display:none">
+                <button id="musicBtn" class="btn">파일 선택</button>
+                <span id="musicName">선택된 파일 없음</span>
+            </div>
+            
+            <div class="control-group">
+                <button id="playBtn" class="btn primary" disabled>▶ 재생</button>
+                <button id="pauseBtn" class="btn" disabled>⏸ 일시정지</button>
+                <button id="stopBtn" class="btn" disabled>⏹ 정지</button>
+            </div>
+
+            <div class="control-group">
+                <label for="densitySlider">ASCII 밀도:</label>
+                <input type="range" id="densitySlider" min="1" max="5" value="2">
+                <span id="densityValue">2</span>
+            </div>
+            <div class="control-group">
+                <label for="columnSlider">출력 폭(문자 수):</label>
+                <input type="range" id="columnSlider" min="40" max="120" value="80">
+                <span id="columnValue">80</span>
+            </div>
+
+            <div class="control-group">
+                <label>
+                    <input type="checkbox" id="showStats" checked>
+                    실시간 정보 표시
+                </label>
+            </div>
+        </div>
+
+        <div class="content flex-row">
+            <div class="video-wrapper">
+                <video id="video" width="480" height="360" autoplay muted playsinline></video>
+                <canvas id="canvas" width="480" height="360" style="display:none;"></canvas>
+            </div>
+            <div id="asciiContainer" class="ascii-container">
+                <pre id="asciiOutput"></pre>
+            </div>
+        </div>
+
+        <div class="stats" id="stats">
+            <div>카메라: <span id="cameraStat">대기중...</span></div>
+            <div>음악: <span id="musicStat">재생 중지</span></div>
+            <div>음량: <span id="volumeStat">0</span>%</div>
+            <div>주파수: <span id="frequencyStat">-</span></div>
+            <div>FPS: <span id="fpsStat">0</span></div>
+        </div>
+        <div id="errorMsg" class="error-msg"></div>
+    </div>
+
+    <!-- TensorFlow.js -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.11.0/dist/tf.min.js"></script>
+    <!-- TensorFlow.js 모델: Body Segmentation -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/body-segmentation@1.1.1"></script>
+    <!-- ML5.js (바디 포즈 감지 대안) -->
+    <!-- 우선 로컬에 저장된 ml5.min.js 사용, 없다면 CDN 시도 -->
+    <script>
+        (function() {
+            var s = document.createElement('script');
+            s.src = 'ml5.min.js';
+            s.onload = function() { console.log('로컬 ml5 로드됨'); };
+            s.onerror = function() {
+                console.warn('로컬 ml5 불러오기 실패, CDN에서 로드 시도');
+                var s2 = document.createElement('script');
+                s2.src = 'https://cdnjs.cloudflare.com/ajax/libs/ml5js/0.12.0/ml5.min.js';
+                document.head.appendChild(s2);
+            };
+            document.head.appendChild(s);
+        })();
+    </script>
+
+    <script src="script.js"></script>
+</body>
+</html>
