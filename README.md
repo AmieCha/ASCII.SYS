@@ -4,7 +4,7 @@
 ![License](https://img.shields.io/badge/License-MIT-blue?style=for-the-badge)
 ![JS](https://img.shields.io/badge/Vanilla-JS-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black)
 
-**ASCII REACTIVE**는 사용자의 웹캠 피드와 실시간 오디오 데이터를 결합하여 몰입감 넘치는 아스키 아트(ASCII Art) 정체성을 생성하는 반응형 웹 어플리케이션입니다. 사이버펑크 스타일의 HUD와 신경 인터페이스(Neural Interface) 테마를 통해 단순한 시각화를 넘어선 디지털 예술적 경험을 제공합니다.
+**ASCII REACTIVE**는 사용자의 웹캠 피드와 실시간 오디오 데이터를 결합하여 몰입감 넘치는 아스키 아트(ASCII Art)를 생성하는 반응형 웹 어플리케이션입니다.
 
 ---
 
@@ -86,5 +86,3 @@
 
 질문이나 피드백이 있다면 저장소의 **Issue** 탭을 이용해 주세요!
 
----
-*Created with 💚 by Antigravity*
