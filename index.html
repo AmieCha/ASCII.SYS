@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ASCII REACTIVE // NEURAL INTERFACE</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <canvas id="matrix-rain"></canvas>
+    <div class="scanline-overlay"></div>
+
+    <div class="container">
+        <!-- Compact info bar header -->
+        <header>
+            <div class="header-brand">
+                <h1>ASCII <span class="accent">REACTIVE</span></h1>
+                <div class="header-tag">// NEURAL INTERFACE v2.1</div>
+            </div>
+            <div class="header-status">
+                <div class="header-stat">
+                    <span class="stat-label">WEBCAM</span>
+                    <span id="webcam-status" class="status-indicator inactive"></span>
+                </div>
+                <div class="header-divider"></div>
+                <div class="header-stat">
+                    <span class="stat-label">AUDIO</span>
+                    <span id="audio-status" class="status-indicator inactive"></span>
+                </div>
+                <div class="header-divider"></div>
+                <div class="header-stat">
+                    <span class="stat-label">FPS</span>
+                    <span id="header-fps" class="stat-value">--</span>
+                </div>
+                <div class="header-stat">
+                    <span class="stat-label">LATENCY</span>
+                    <span id="header-latency" class="stat-value">--ms</span>
+                </div>
+            </div>
+        </header>
+
+        <main>
+            <div id="ascii-container">
+                <pre id="ascii-output"></pre>
+
+                <!-- HUD Overlay -->
+                <div class="hud-overlay">
+                    <div class="hud-top">
+                        <span class="hud-item">FPS <span id="hud-fps">--</span></span>
+                        <span class="hud-item">AUDIO <span id="hud-audio">0%</span></span>
+                        <span class="hud-item">BASS <span id="hud-bass">0%</span></span>
+                    </div>
+                    <div class="hud-bottom">
+                        <span id="hud-rec" class="hud-rec" style="display:none">● REC</span>
+                    </div>
+                </div>
+
+                <div class="corner-tl"></div>
+                <div class="corner-br"></div>
+                <div class="overlay">
+                    <div id="start-overlay" class="glass-card">
+                        <div class="card-tag">[ SYSTEM INIT ]</div>
+                        <h2>연결 대기 중</h2>
+                        <p>웹캠 및 탭 오디오 접근 권한이 필요합니다.</p>
+                        <button id="start-btn" class="primary-btn"><span>// 연결 시작</span></button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="controls">
+                <div class="controls-inner">
+
+                    <!-- 주파수 분석 -->
+                    <div class="panel-section" data-collapsible>
+                        <div class="section-label" role="button">주파수 분석</div>
+                        <div class="section-content">
+                            <div class="visualizer">
+                                <div id="meter-bass" class="meter">
+                                    <div class="meter-header"><span>BASS</span></div>
+                                    <div class="fill-track"><div class="fill"></div></div>
+                                </div>
+                                <div id="meter-mid" class="meter">
+                                    <div class="meter-header"><span>MID</span></div>
+                                    <div class="fill-track"><div class="fill"></div></div>
+                                </div>
+                                <div id="meter-treble" class="meter">
+                                    <div class="meter-header"><span>TREBLE</span></div>
+                                    <div class="fill-track"><div class="fill"></div></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ASCII 스타일 + 밀도 -->
+                    <div class="panel-section" data-collapsible>
+                        <div class="section-label" role="button">ASCII 스타일</div>
+                        <div class="section-content">
+                            <div class="style-group">
+                                <label class="style-radio">
+                                    <input type="radio" name="ascii-style" value="classic" checked>
+                                    <span class="radio-dot"></span>
+                                    <span class="radio-label">Classic</span>
+                                    <span class="style-preview">@#@@#@</span>
+                                </label>
+                                <label class="style-radio">
+                                    <input type="radio" name="ascii-style" value="dense">
+                                    <span class="radio-dot"></span>
+                                    <span class="radio-label">Dense</span>
+                                    <span class="style-preview">@#%MW</span>
+                                </label>
+                                <label class="style-radio">
+                                    <input type="radio" name="ascii-style" value="matrix">
+                                    <span class="radio-dot"></span>
+                                    <span class="radio-label">Matrix</span>
+                                    <span class="style-preview">101101</span>
+                                </label>
+                                <label class="style-radio">
+                                    <input type="radio" name="ascii-style" value="glitch">
+                                    <span class="radio-dot"></span>
+                                    <span class="radio-label">Glitch</span>
+                                    <span class="style-preview">$%#&$#</span>
+                                </label>
+                            </div>
+
+                            <div id="custom-input-panel" style="display: none; margin-top: 0.8rem; padding-top: 0.8rem; border-top: 1px solid var(--border);">
+                                <div class="setting-item">
+                                    <label for="custom-chars-input">커스텀 문자셋</label>
+                                    <input type="text" id="custom-chars-input" value="$#@!%&" class="cyber-input" spellcheck="false">
+                                </div>
+                            </div>
+
+                            <div class="setting-item" style="margin-top: 0.9rem; padding-top: 0.8rem; border-top: 1px solid var(--border);">
+                                <label for="density-slider">밀도</label>
+                                <input type="range" id="density-slider" min="10" max="100" value="50">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 색상 테마 -->
+                    <div class="panel-section" data-collapsible>
+                        <div class="section-label" role="button">색상 테마</div>
+                        <div class="section-content">
+                            <div class="color-presets">
+                                <button class="color-preset active" data-color="#00FF41" title="Matrix Green"></button>
+                                <button class="color-preset" data-color="#00CFFF" title="Cyber Blue"></button>
+                                <button class="color-preset" data-color="#FF2255" title="Blood Red"></button>
+                                <button class="color-preset" data-color="#BF5FFF" title="Neon Purple"></button>
+                                <button class="color-preset" data-color="#FF8800" title="Ember Orange"></button>
+                                <button class="color-preset" data-color="#FFFFFF" title="White"></button>
+                            </div>
+                            <div class="color-mode-group">
+                                <label class="style-radio">
+                                    <input type="radio" name="color-mode" value="solid" checked>
+                                    <span class="radio-dot"></span>
+                                    <span class="radio-label">Solid</span>
+                                </label>
+                                <label class="style-radio">
+                                    <input type="radio" name="color-mode" value="pulse">
+                                    <span class="radio-dot"></span>
+                                    <span class="radio-label">Beat Pulse</span>
+                                </label>
+                                <label class="style-radio">
+                                    <input type="radio" name="color-mode" value="rainbow">
+                                    <span class="radio-dot"></span>
+                                    <span class="radio-label">Rainbow</span>
+                                </label>
+                            </div>
+                            <div class="setting-item" style="margin-top: 0.8rem; padding-top: 0.8rem; border-top: 1px solid var(--border);">
+                                <label for="custom-color">커스텀 색상</label>
+                                <input type="color" id="custom-color" value="#00FF41" class="color-picker">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 녹화 & 공유 -->
+                    <div class="panel-section" data-collapsible>
+                        <div class="section-label" role="button">녹화 &amp; 공유</div>
+                        <div class="section-content">
+                            <div class="record-panel">
+                                <button id="record-btn" class="record-btn">
+                                    <span class="rec-dot"></span>
+                                    <span class="btn-text">RECORD</span>
+                                </button>
+                                <div id="record-status" class="record-status" style="display: none;">
+                                    <div class="rec-timer-display">
+                                        <span class="rec-badge">● RECORDING</span>
+                                        <span class="timer">10.0s</span>
+                                    </div>
+                                    <div class="progress-bar"><div class="progress-fill"></div></div>
+                                </div>
+                                <div id="share-prompt" class="share-prompt" style="display: none;">
+                                    <div class="prompt-text">CAPTURE READY</div>
+                                    <div class="share-actions">
+                                        <button id="download-btn" class="share-action-btn">DOWNLOAD</button>
+                                        <button id="share-web-btn" class="share-action-btn">SHARE</button>
+                                    </div>
+                                    <button id="copy-ascii-btn" class="share-action-btn share-action-full">COPY ASCII FRAME</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div><!-- /.controls-inner -->
+            </div>
+        </main>
+
+        <video id="webcam-video" autoplay playsinline style="display:none"></video>
+        <canvas id="proc-canvas" style="display:none"></canvas>
+    </div>
+
+    <script src="matrix-rain.js"></script>
+    <script src="main.js"></script>
+</body>
+</html>
