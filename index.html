@@ -8,36 +8,32 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
+    <!-- MediaPipe Face Mesh -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js" crossorigin="anonymous"></script>
 </head>
 <body>
-    <canvas id="matrix-rain"></canvas>
     <div class="scanline-overlay"></div>
 
     <div class="container">
-        <!-- Compact info bar header -->
+        <!-- Compact minimalist header -->
         <header>
             <div class="header-brand">
                 <h1>ASCII <span class="accent">REACTIVE</span></h1>
-                <div class="header-tag">// NEURAL INTERFACE v2.1</div>
+                <div class="header-tag">// v2.1</div>
             </div>
             <div class="header-status">
-                <div class="header-stat">
-                    <span class="stat-label">WEBCAM</span>
-                    <span id="webcam-status" class="status-indicator inactive"></span>
+                <div class="header-stat" title="WEBCAM">
+                    <span id="webcam-status" class="status-indicator-dot inactive"></span>
+                    <span class="stat-label">CAM</span>
                 </div>
-                <div class="header-divider"></div>
-                <div class="header-stat">
-                    <span class="stat-label">AUDIO</span>
-                    <span id="audio-status" class="status-indicator inactive"></span>
+                <div class="header-stat" title="AUDIO">
+                    <span id="audio-status" class="status-indicator-dot inactive"></span>
+                    <span class="stat-label">AUD</span>
                 </div>
                 <div class="header-divider"></div>
                 <div class="header-stat">
                     <span class="stat-label">FPS</span>
                     <span id="header-fps" class="stat-value">--</span>
-                </div>
-                <div class="header-stat">
-                    <span class="stat-label">LATENCY</span>
-                    <span id="header-latency" class="stat-value">--ms</span>
                 </div>
             </div>
         </header>
@@ -45,15 +41,13 @@
         <main>
             <div id="ascii-container">
                 <pre id="ascii-output"></pre>
+                <canvas id="emoji-canvas"></canvas>
 
-                <!-- HUD Overlay -->
                 <div class="hud-overlay">
-                    <div class="hud-top">
-                        <span class="hud-item">FPS <span id="hud-fps">--</span></span>
-                        <span class="hud-item">AUDIO <span id="hud-audio">0%</span></span>
-                        <span class="hud-item">BASS <span id="hud-bass">0%</span></span>
+                    <div class="hud-top-right">
+                        <span id="header-latency" class="hud-value">--ms</span>
                     </div>
-                    <div class="hud-bottom">
+                    <div class="hud-bottom-right">
                         <span id="hud-rec" class="hud-rec" style="display:none">● REC</span>
                     </div>
                 </div>
@@ -63,144 +57,156 @@
                 <div class="overlay">
                     <div id="start-overlay" class="glass-card">
                         <div class="card-tag">[ SYSTEM INIT ]</div>
-                        <h2>연결 대기 중</h2>
-                        <p>웹캠 및 탭 오디오 접근 권한이 필요합니다.</p>
-                        <button id="start-btn" class="primary-btn"><span>// 연결 시작</span></button>
+                        <h2>NEURAL INTERFACE</h2>
+                        <p>웹캠 및 오디오 접근 권한이 필요합니다.</p>
+                        <button id="start-btn" class="primary-btn"><span>// INITIALIZE</span></button>
                     </div>
                 </div>
             </div>
 
             <div class="controls">
                 <div class="controls-inner">
-
-                    <!-- 주파수 분석 -->
+                    
+                    <!-- SECTION 1: CORE (THEME + STYLE) -->
                     <div class="panel-section" data-collapsible>
-                        <div class="section-label" role="button">주파수 분석</div>
+                        <div class="section-label" role="button">
+                            <span class="section-label-main">[ CORE ]</span>
+                            <span class="section-label-sub">MODE & CHARSET</span>
+                        </div>
                         <div class="section-content">
-                            <div class="visualizer">
-                                <div id="meter-bass" class="meter">
-                                    <div class="meter-header"><span>BASS</span></div>
-                                    <div class="fill-track"><div class="fill"></div></div>
-                                </div>
-                                <div id="meter-mid" class="meter">
-                                    <div class="meter-header"><span>MID</span></div>
-                                    <div class="fill-track"><div class="fill"></div></div>
-                                </div>
-                                <div id="meter-treble" class="meter">
-                                    <div class="meter-header"><span>TREBLE</span></div>
-                                    <div class="fill-track"><div class="fill"></div></div>
-                                </div>
+                            <div class="sub-label">THEME</div>
+                            <div class="theme-preset-grid">
+                                <button class="theme-preset-btn active" data-theme="none">DEF</button>
+                                <button class="theme-preset-btn" data-theme="cyberpunk">CYBER</button>
+                                <button class="theme-preset-btn" data-theme="emoji">MOON</button>
+                                <button class="theme-preset-btn" data-theme="depth">3D</button>
+                            </div>
+
+                            <div class="sub-label section-divider">CHARSET</div>
+                            <div class="style-chip-grid">
+                                <label class="style-chip">
+                                    <input type="radio" name="ascii-style" value="classic" checked>
+                                    <span class="chip-inner">CLASSIC</span>
+                                </label>
+                                <label class="style-chip">
+                                    <input type="radio" name="ascii-style" value="dense">
+                                    <span class="chip-inner">DENSE</span>
+                                </label>
+                                <label class="style-chip">
+                                    <input type="radio" name="ascii-style" value="katakana">
+                                    <span class="chip-inner">JP</span>
+                                </label>
+                                <label class="style-chip">
+                                    <input type="radio" name="ascii-style" value="cyber">
+                                    <span class="chip-inner">CYBER</span>
+                                </label>
+                                <label class="style-chip">
+                                    <input type="radio" name="ascii-style" value="glitch">
+                                    <span class="chip-inner">GLITCH</span>
+                                </label>
+                            </div>
+                            
+                            <div id="custom-input-panel" class="setting-divider" style="display: none;">
+                                <input type="text" id="custom-chars-input" value="$#@!%&" class="cyber-input" placeholder="CUSTOM CHARS">
                             </div>
                         </div>
                     </div>
 
-                    <!-- ASCII 스타일 + 밀도 -->
+                    <!-- SECTION 2: TWEAK (COLOR + DENSITY) -->
                     <div class="panel-section" data-collapsible>
-                        <div class="section-label" role="button">ASCII 스타일</div>
+                        <div class="section-label" role="button">
+                            <span class="section-label-main">[ TWEAK ]</span>
+                            <span class="section-label-sub">PARAMS</span>
+                        </div>
                         <div class="section-content">
-                            <div class="style-group">
-                                <label class="style-radio">
-                                    <input type="radio" name="ascii-style" value="classic" checked>
-                                    <span class="radio-dot"></span>
-                                    <span class="radio-label">Classic</span>
-                                    <span class="style-preview">@#@@#@</span>
-                                </label>
-                                <label class="style-radio">
-                                    <input type="radio" name="ascii-style" value="dense">
-                                    <span class="radio-dot"></span>
-                                    <span class="radio-label">Dense</span>
-                                    <span class="style-preview">@#%MW</span>
-                                </label>
-                                <label class="style-radio">
-                                    <input type="radio" name="ascii-style" value="matrix">
-                                    <span class="radio-dot"></span>
-                                    <span class="radio-label">Matrix</span>
-                                    <span class="style-preview">101101</span>
-                                </label>
-                                <label class="style-radio">
-                                    <input type="radio" name="ascii-style" value="glitch">
-                                    <span class="radio-dot"></span>
-                                    <span class="radio-label">Glitch</span>
-                                    <span class="style-preview">$%#&$#</span>
-                                </label>
-                            </div>
-
-                            <div id="custom-input-panel" style="display: none; margin-top: 0.8rem; padding-top: 0.8rem; border-top: 1px solid var(--border);">
-                                <div class="setting-item">
-                                    <label for="custom-chars-input">커스텀 문자셋</label>
-                                    <input type="text" id="custom-chars-input" value="$#@!%&" class="cyber-input" spellcheck="false">
+                            <div class="setting-item">
+                                <div class="setting-heading-row">
+                                    <label>DENSITY</label>
+                                    <span id="density-value" class="setting-value">50</span>
                                 </div>
-                            </div>
-
-                            <div class="setting-item" style="margin-top: 0.9rem; padding-top: 0.8rem; border-top: 1px solid var(--border);">
-                                <label for="density-slider">밀도</label>
                                 <input type="range" id="density-slider" min="10" max="100" value="50">
                             </div>
+
+                            <div class="color-panel" id="color-panel">
+                                <div class="sub-label section-divider">COLOR</div>
+                                <div class="color-presets">
+                                    <button class="color-preset active" data-color="#00FF41"></button>
+                                    <button class="color-preset" data-color="#00CFFF"></button>
+                                    <button class="color-preset" data-color="#FF2255"></button>
+                                    <button class="color-preset" data-color="#BF5FFF"></button>
+                                    <button class="color-preset" data-color="#FFFFFF"></button>
+                                    <input type="color" id="custom-color" value="#00FF41" class="color-picker-mini">
+                                </div>
+                                <div class="color-mode-row">
+                                    <label class="mode-tab"><input type="radio" name="color-mode" value="solid" checked><span>SOLID</span></label>
+                                    <label class="mode-tab"><input type="radio" name="color-mode" value="pulse"><span>PULSE</span></label>
+                                    <label class="mode-tab"><input type="radio" name="color-mode" value="rainbow"><span>RAIN</span></label>
+                                </div>
+                            </div>
+
+                            <div class="theme-lock-notice" id="theme-lock-notice" style="display:none">
+                                // LOCKED BY THEME
+                            </div>
                         </div>
                     </div>
 
-                    <!-- 색상 테마 -->
+                    <!-- SECTION 3: AUDIO (METERS) -->
                     <div class="panel-section" data-collapsible>
-                        <div class="section-label" role="button">색상 테마</div>
+                        <div class="section-label" role="button">
+                            <span class="section-label-main">[ AUDIO ]</span>
+                            <span class="section-label-sub">ANALYZER</span>
+                        </div>
                         <div class="section-content">
-                            <div class="color-presets">
-                                <button class="color-preset active" data-color="#00FF41" title="Matrix Green"></button>
-                                <button class="color-preset" data-color="#00CFFF" title="Cyber Blue"></button>
-                                <button class="color-preset" data-color="#FF2255" title="Blood Red"></button>
-                                <button class="color-preset" data-color="#BF5FFF" title="Neon Purple"></button>
-                                <button class="color-preset" data-color="#FF8800" title="Ember Orange"></button>
-                                <button class="color-preset" data-color="#FFFFFF" title="White"></button>
+                            <div class="freq-meter-grid">
+                                <div id="meter-bass" class="meter-mini">
+                                    <div class="meter-head"><span class="mini-label">BASS</span><span id="meter-bass-value" class="mini-value">0%</span></div>
+                                    <div class="fill-track"><div class="fill"></div></div>
+                                </div>
+                                <div id="meter-mid" class="meter-mini">
+                                    <div class="meter-head"><span class="mini-label">MID</span><span id="meter-mid-value" class="mini-value">0%</span></div>
+                                    <div class="fill-track"><div class="fill"></div></div>
+                                </div>
+                                <div id="meter-treble" class="meter-mini">
+                                    <div class="meter-head"><span class="mini-label">TREB</span><span id="meter-treble-value" class="mini-value">0%</span></div>
+                                    <div class="fill-track"><div class="fill"></div></div>
+                                </div>
                             </div>
-                            <div class="color-mode-group">
-                                <label class="style-radio">
-                                    <input type="radio" name="color-mode" value="solid" checked>
-                                    <span class="radio-dot"></span>
-                                    <span class="radio-label">Solid</span>
-                                </label>
-                                <label class="style-radio">
-                                    <input type="radio" name="color-mode" value="pulse">
-                                    <span class="radio-dot"></span>
-                                    <span class="radio-label">Beat Pulse</span>
-                                </label>
-                                <label class="style-radio">
-                                    <input type="radio" name="color-mode" value="rainbow">
-                                    <span class="radio-dot"></span>
-                                    <span class="radio-label">Rainbow</span>
-                                </label>
-                            </div>
-                            <div class="setting-item" style="margin-top: 0.8rem; padding-top: 0.8rem; border-top: 1px solid var(--border);">
-                                <label for="custom-color">커스텀 색상</label>
-                                <input type="color" id="custom-color" value="#00FF41" class="color-picker">
+                            <div class="audio-stat-row">
+                                <div class="audio-stat">VOL: <span id="header-audio">0%</span></div>
+                                <div class="audio-stat">BASS: <span id="header-bass">0%</span></div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- 녹화 & 공유 -->
+                    <!-- SECTION 4: EXPORT -->
                     <div class="panel-section" data-collapsible>
-                        <div class="section-label" role="button">녹화 &amp; 공유</div>
+                        <div class="section-label" role="button">
+                            <span class="section-label-main">[ EXPORT ]</span>
+                            <span class="section-label-sub">CAPTURE</span>
+                        </div>
                         <div class="section-content">
                             <div class="record-panel">
-                                <button id="record-btn" class="record-btn">
+                                <button id="record-btn" class="record-btn-minimal">
                                     <span class="rec-dot"></span>
-                                    <span class="btn-text">RECORD</span>
+                                    <span class="btn-text">REC</span>
                                 </button>
                                 <div id="record-status" class="record-status" style="display: none;">
-                                    <div class="rec-timer-display">
-                                        <span class="rec-badge">● RECORDING</span>
-                                        <span class="timer">10.0s</span>
-                                    </div>
+                                    <div class="timer">10.0s</div>
                                     <div class="progress-bar"><div class="progress-fill"></div></div>
                                 </div>
                                 <div id="share-prompt" class="share-prompt" style="display: none;">
-                                    <div class="prompt-text">CAPTURE READY</div>
-                                    <div class="share-actions">
-                                        <button id="download-btn" class="share-action-btn">DOWNLOAD</button>
-                                        <button id="share-web-btn" class="share-action-btn">SHARE</button>
+                                    <div class="share-actions-minimal">
+                                        <button id="download-btn" class="share-btn">DL</button>
+                                        <button id="share-web-btn" class="share-btn">SHARE</button>
+                                        <button id="copy-ascii-btn" class="share-btn">COPY</button>
                                     </div>
-                                    <button id="copy-ascii-btn" class="share-action-btn share-action-full">COPY ASCII FRAME</button>
                                 </div>
                             </div>
                         </div>
+                    </div>
+
+                    <div class="quick-status-bar">
+                        <span id="state-theme">DEFAULT</span> // <span id="state-style">CLASSIC</span> // <span id="state-density">50</span>
                     </div>
 
                 </div><!-- /.controls-inner -->
@@ -211,7 +217,10 @@
         <canvas id="proc-canvas" style="display:none"></canvas>
     </div>
 
-    <script src="matrix-rain.js"></script>
+        <video id="webcam-video" autoplay playsinline style="display:none"></video>
+        <canvas id="proc-canvas" style="display:none"></canvas>
+    </div>
+
     <script src="main.js"></script>
 </body>
 </html>

@@ -1,6 +1,6 @@
 # 🌌 ASCII REACTIVE // NEURAL INTERFACE v2.1
 
-![ASCII REACTIVE Header](https://img.shields.io/badge/Status-Stable-00FF41?style=for-the-badge&logo=matrix&logoColor=00FF41)
+![ASCII REACTIVE Header](https://img.shields.io/badge/Status-Stable-00FF41?style=for-the-badge)
 ![License](https://img.shields.io/badge/License-MIT-blue?style=for-the-badge)
 ![JS](https://img.shields.io/badge/Vanilla-JS-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black)
 
@@ -20,9 +20,9 @@
 - **비트 펄스**: 음악의 리듬에 따라 텍스트의 밝기와 글로우(Glow) 효과가 반응합니다.
 
 ### 🎨 커스텀 스타일 및 테마 (Customization)
-- **프리셋 스타일**: Classic, Dense, Matrix, Glitch 등 4가지 기본 모드를 제공합니다.
+- **프리셋 스타일**: Classic, Dense, Glitch 등 기본 모드를 제공합니다.
 - **글리치 모드**: 베이스 강도가 높을 때 문자가 무작위로 뒤섞이는 글리치 연출을 지원합니다.
-- **컬러 시스템**: Matrix Green, Cyber Blue, Blood Red 등 5개 이상의 프리셋과 Rainbow(무지개), Beat Pulse 모드를 지원합니다.
+- **컬러 시스템**: Neon Green, Cyber Blue, Blood Red 등 5개 이상의 프리셋과 Rainbow(무지개), Beat Pulse 모드를 지원합니다.
 - **커스텀 문자셋**: 사용자가 직접 원하는 문자를 입력하여 아스키 아트를 구성할 수 있습니다.
 
 ### ⏺ 녹화 및 공유 (Recording & Sharing)
