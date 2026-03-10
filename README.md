@@ -7,6 +7,7 @@
 **ASCII REACTIVE**는 사용자의 웹캠 피드와 실시간 오디오 데이터를 결합하여 몰입감 넘치는 아스키 아트(ASCII Art)를 생성하는 반응형 웹 어플리케이션입니다.
 
 ---
+<img width="1662" height="825" alt="image" src="https://github.com/user-attachments/assets/108005ee-af97-472e-8197-9dd23c4620cc" />
 
 ## ✨ 핵심 기능 (Key Features)
 
